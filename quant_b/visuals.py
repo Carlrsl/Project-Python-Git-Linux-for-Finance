@@ -3,29 +3,34 @@ import streamlit as st
 
 def plot_correlation_heatmap(corr_matrix):
     """
-    Displays an interactive Heatmap using Plotly.
+    Displays an interactive Heatmap using Plotly Express.
+    Visualizes the correlation matrix calculated in statistics.py.
     """
-    # Create heatmap
     fig = px.imshow(
         corr_matrix,
-        text_auto=".2f",       # Show values with 2 decimal places
+        text_auto=".2f",                  # Display values with 2 decimal places
         aspect="auto",
-        color_continuous_scale="RdBu_r",  # Red = Correlated, Blue = Inverse
-        zmin=-1, zmax=1,
+        color_continuous_scale="RdBu_r",  # Red = Positive Correlation, Blue = Negative
+        zmin=-1, 
+        zmax=1,
         origin='lower'
     )
     
-    # Update layout for a cleaner look
     fig.update_layout(title="Asset Correlation Matrix")
     
-    # Display in Streamlit
+    # Use full container width for better integration in the dashboard
     st.plotly_chart(fig, use_container_width=True)
 
 def plot_normalized_prices(df_normalized):
     """
-    Displays a line chart comparing normalized asset performance.
+    Displays a line chart comparing normalized asset performance (Base 100).
     """
     fig = px.line(df_normalized, title="Performance Comparison (Base 100)")
-    fig.update_layout(xaxis_title="Date", yaxis_title="Normalized Price")
+    
+    fig.update_layout(
+        xaxis_title="Date", 
+        yaxis_title="Normalized Price (Start=100)",
+        legend_title="Assets"
+    )
     
     st.plotly_chart(fig, use_container_width=True)
