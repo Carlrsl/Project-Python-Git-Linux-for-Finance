@@ -1,33 +1,69 @@
-import yfinance as yf
+import numpy as np
 import pandas as pd
-import streamlit as st
 
-def get_market_data(tickers, period="1y"):
+def simulate_portfolio(df_prices, weights):
     """
-    Fetch historical data for a list of tickers.
+    Simulates a portfolio based on historical data and user-defined weights.
+    
+    Args:
+        df_prices (pd.DataFrame): Historical closing prices of assets.
+        weights (list or np.array): List of weights (must sum to 1).
+        
+    Returns:
+        dict: A dictionary containing metrics and cumulative return series.
     """
-    # Download data from Yahoo Finance
-    # group_by='ticker' organizes data nicely by asset
-    data = yf.download(tickers, period=period, group_by='ticker', auto_adjust=True)
+    # 1. Calculate daily returns of individual assets
+    asset_returns = df_prices.pct_change().dropna()
     
-    # Create an empty DataFrame to store Close prices
-    df_close = pd.DataFrame()
+    # 2. Ensure weights are a numpy array
+    weights = np.array(weights)
     
-    # Loop through each ticker to extract the 'Close' price
-    for t in tickers:
-        try:
-            # Try to get the Close column
-            df_close[t] = data[t]['Close']
-        except KeyError:
-            # If ticker is wrong, show error
-            st.error(f"Error: Could not retrieve data for {t}")
-            
-    return df_close
+    # Normalize weights if they don't sum to 1 (Safety check)
+    if np.sum(weights) != 0:
+        weights = weights / np.sum(weights)
+        
+    # 3. Calculate Portfolio Daily Returns
+    # Dot product: (Dates x Assets) . (Assets x 1) = (Dates x 1)
+    portfolio_daily_returns = asset_returns.dot(weights)
+    
+    # 4. Calculate Cumulative Returns (Growth of $1)
+    # Formula: (1 + r1) * (1 + r2) * ...
+    portfolio_cumulative_returns = (1 + portfolio_daily_returns).cumprod()
+    
+    # Rebase to start at 1.0 (or 100) for the first valid date
+    # We divide by the first value so the chart starts at the same point
+    if not portfolio_cumulative_returns.empty:
+        portfolio_cumulative_returns = portfolio_cumulative_returns / portfolio_cumulative_returns.iloc[0]
 
-def normalize_data(df):
-    """
-    Normalize data to base 100 for comparison.
-    Formula: (Price / Initial_Price) * 100
-    """
-    # We divide the whole dataframe by the first row (iloc[0])
-    return (df / df.iloc[0]) * 100
+    # 5. Calculate Key Metrics (Annualized)
+    # Assuming 252 trading days in a year
+    if not portfolio_cumulative_returns.empty:
+        total_return = portfolio_cumulative_returns.iloc[-1] - 1
+    else:
+        total_return = 0.0
+        
+    annual_volatility = portfolio_daily_returns.std() * np.sqrt(252)
+    
+    # Sharpe Ratio (assuming risk-free rate ~ 0 for simplicity)
+    if annual_volatility == 0:
+        sharpe_ratio = 0
+    else:
+        sharpe_ratio = (portfolio_daily_returns.mean() / portfolio_daily_returns.std()) * np.sqrt(252)
+    
+    # Max Drawdown Calculation
+    rolling_max = portfolio_cumulative_returns.cummax()
+    drawdown = portfolio_cumulative_returns / rolling_max - 1.0
+    max_drawdown = drawdown.min()
+
+    metrics = {
+        "Total Return": total_return,
+        "Annual Volatility": annual_volatility,
+        "Sharpe Ratio": sharpe_ratio,
+        "Max Drawdown": max_drawdown
+    }
+    
+    return {
+        "cumulative_returns": portfolio_cumulative_returns,
+        "daily_returns": portfolio_daily_returns,
+        "metrics": metrics
+    }
