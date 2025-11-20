@@ -1,62 +1,67 @@
 import streamlit as st
-import yfinance as yf
+# Import shared utilities
+from utils.data_loader import get_data
+# Import Quant B specific modules
+from quant_b.statistics import calculate_global_metrics, normalize_prices
+from quant_b.visuals import plot_correlation_heatmap, plot_normalized_prices
 
 # Page Configuration (Must be the first command)
-st.set_page_config(page_title="Finance Dashboard", layout="wide")
+st.set_page_config(page_title="Asset Management Dashboard", layout="wide")
 
 def main():
-    st.title("Finance Dashboard - Carl & Louis")
-    
-    # Create Tabs
-    tab_home, tab_quant_a, tab_quant_b = st.tabs(["Home", "Quant A", "Quant B (Portfolio)"])
+    st.title("Asset Management Dashboard")
+    st.markdown("---")
 
-    # --- HOME TAB ---
-    with tab_home:
-        st.header("Welcome")
-        st.write("This dashboard is a collaborative project for Python for Finance.")
-        st.info("Use the tabs above to navigate between modules.")
+    # Create tabs for the two main modules
+    tab_a, tab_b = st.tabs(["Quant A (Single Asset)", "Quant B (Portfolio)"])
 
-    # --- QUANT A TAB (Placeholder for Louis) ---
-    with tab_quant_a:
-        st.header("Single Asset Analysis")
-        st.write("Analysis for a single asset will be here.")
-        st.warning("Work in progress...")
-
-    # --- QUANT B TAB (Portfolio Manager - YOUR WORK) ---
-    with tab_quant_b:
-        st.header("Portfolio Analysis Module")
+    # --- QUANT B MODULE (Portfolio Analysis) ---
+    with tab_b:
+        st.header("Multi-Asset Analysis")
         
         # 1. User Inputs
         col1, col2 = st.columns(2)
         with col1:
-            tickers_input = st.text_input("Enter Assets (comma separated)", "AAPL, MSFT, GOOGL, BTC-USD")
+            default_tickers = "AAPL, MSFT, GOOGL, BTC-USD, GLD"
+            tickers_input = st.text_input("Assets (comma separated)", default_tickers)
         with col2:
-            period_input = st.selectbox("Select Period", ["1mo", "3mo", "6mo", "1y", "5y"], index=3)
-        
-        # 2. Run Analysis Button
-        if st.button("Run Analysis"):
-            # Clean up the input list
-            tickers_list = [x.strip().upper() for x in tickers_input.split(',')]
+            period = st.selectbox("Analysis Period", ["1mo", "3mo", "6mo", "1y", "5y"], index=3)
             
-            # Import your function dynamically
-            from quant_b.portfolio_manager import get_market_data, normalize_data
-            
-            st.write("Fetching data...")
-            
-            # Get Data
-            df = get_market_data(tickers_list, period=period_input)
-            
-            # Display Data
-            if not df.empty:
-                st.success("Data loaded successfully!")
+        # 2. Trigger Analysis Button
+        if st.button("Run Portfolio Analysis"):
+            with st.spinner("Fetching market data..."):
+                # A. Data Fetching (Shared Module)
+                df = get_data(tickers_input, period)
                 
-                # Plot Normalized Data
-                st.subheader("Performance Comparison (Base 100)")
-                df_normalized = normalize_data(df)
-                st.line_chart(df_normalized)
-            else:
-                st.error("No data found. Please check the ticker symbols.")
+                # Check if we have valid data and enough assets
+                if not df.empty and len(df.columns) > 1:
+                    
+                    # B. Calculations (Backend)
+                    returns, corr_matrix = calculate_global_metrics(df)
+                    df_norm = normalize_prices(df)
+                    
+                    # C. Visualization (Frontend)
+                    
+                    # Section 1: Performance Chart
+                    st.subheader("Performance Comparison")
+                    plot_normalized_prices(df_norm)
+                    
+                    # Section 2: Correlation Matrix
+                    st.subheader("Correlation Analysis")
+                    st.info("Correlation values range from -1 (Inverse) to +1 (Identical movement).")
+                    plot_correlation_heatmap(corr_matrix)
+                    
+                elif len(df.columns) == 1:
+                    st.warning("Please select at least 2 assets to calculate correlations.")
+                    # Still display the chart for the single asset
+                    st.line_chart(df)
+                else:
+                    st.error("No data found. Please check the ticker symbols.")
 
-# Entry point of the application
+    # --- QUANT A MODULE (Placeholder) ---
+    with tab_a:
+        st.info("Module under development by Quant A Team Member.")
+
+# Application Entry Point
 if __name__ == "__main__":
     main()
