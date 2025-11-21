@@ -3,17 +3,11 @@ import os
 import pandas as pd
 from datetime import datetime
 
-# Add the project root to the python path to allow importing 'utils'
-# This is necessary because this script is inside the 'scripts/' folder
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils.data_loader import get_data
 
 def generate_report():
-    """
-    Fetches data, calculates daily statistics, and saves a text report.
-    This function is intended to be run via Cron.
-    """
     # 1. Configuration
     tickers = "AAPL,MSFT,BTC-USD,EURUSD=X"
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -55,7 +49,7 @@ def generate_report():
             # Simple volatility (std dev of last 5 days returns)
             recent_vol = series.pct_change().std()
 
-            lines.append(f"{ticker:<10} | {current_price:<10.2f} | {daily_return:<10.2% } | {recent_vol:<15.2%}")
+            lines.append(f"{ticker:<10} | {current_price:<10.2f} | {daily_return:<10.2%} | {recent_vol:<15.2%}")
 
         # 4. Save to File
         with open(report_path, "w") as f:

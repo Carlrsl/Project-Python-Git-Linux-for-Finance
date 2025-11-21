@@ -2,10 +2,6 @@ import plotly.express as px
 import streamlit as st
 
 def plot_correlation_heatmap(corr_matrix):
-    """
-    Displays an interactive Heatmap using Plotly Express.
-    Visualizes the correlation matrix calculated in statistics.py.
-    """
     fig = px.imshow(
         corr_matrix,
         text_auto=".2f",                  # Display values with 2 decimal places
@@ -17,14 +13,9 @@ def plot_correlation_heatmap(corr_matrix):
     )
     
     fig.update_layout(title="Asset Correlation Matrix")
-    
-    # Use full container width for better integration in the dashboard
     st.plotly_chart(fig, use_container_width=True)
 
 def plot_normalized_prices(df_normalized):
-    """
-    Displays a line chart comparing normalized asset performance (Base 100).
-    """
     fig = px.line(df_normalized, title="Performance Comparison (Base 100)")
     
     fig.update_layout(

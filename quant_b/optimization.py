@@ -3,9 +3,7 @@ import pandas as pd
 from scipy.optimize import minimize
 
 def get_portfolio_performance(weights, mean_returns, cov_matrix):
-    """
-    Calculates portfolio return and volatility for given weights.
-    """
+
     # Annualized Return (252 trading days)
     returns = np.sum(mean_returns * weights) * 252
     # Annualized Volatility
@@ -13,24 +11,11 @@ def get_portfolio_performance(weights, mean_returns, cov_matrix):
     return returns, std
 
 def neg_sharpe_ratio(weights, mean_returns, cov_matrix, risk_free_rate):
-    """
-    Objective function to minimize (Negative Sharpe Ratio).
-    Minimizing negative Sharpe is equivalent to maximizing Sharpe.
-    """
+
     p_ret, p_var = get_portfolio_performance(weights, mean_returns, cov_matrix)
     return -(p_ret - risk_free_rate) / p_var
 
 def optimize_portfolio(df_prices, risk_free_rate=0.02):
-    """
-    Finds the optimal portfolio weights to maximize the Sharpe Ratio using Markowitz MPT.
-    
-    Args:
-        df_prices (pd.DataFrame): Historical asset prices.
-        risk_free_rate (float): Risk-free rate approximation (e.g., 0.02 for 2%).
-        
-    Returns:
-        dict: Optimal weights and performance metrics.
-    """
     # Calculate returns and covariance
     returns = df_prices.pct_change().dropna()
     mean_returns = returns.mean()

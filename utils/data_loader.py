@@ -2,33 +2,17 @@ import yfinance as yf
 import pandas as pd
 import streamlit as st
 
-@st.cache_data(ttl=300) # Cache data for 5 minutes to minimize API calls
+@st.cache_data(ttl=300)
 def get_data(tickers, period="1y"):
-    """
-    Fetches adjusted closing prices for a list of tickers from Yahoo Finance.
-    Used by both Quant A and Quant B modules.
-    
-    Args:
-        tickers (str or list): List of tickers or a comma-separated string.
-        period (str): History period (e.g., '1mo', '1y', '5y').
-        
-    Returns:
-        pd.DataFrame: DataFrame containing only 'Close' prices.
-                      Returns an empty DataFrame on failure.
-    """
     # Handle empty inputs
     if not tickers:
         return pd.DataFrame()
     
-    # Clean input string: " AAPL, msft " -> ['AAPL', 'MSFT']
     if isinstance(tickers, str):
         tickers = [t.strip().upper() for t in tickers.split(',')]
 
     try:
         print(f"[INFO] Fetching data from Yahoo Finance: {tickers}")
-        
-        # group_by='ticker' ensures a consistent structure for multiple assets
-        # auto_adjust=True gets the split/dividend adjusted price
         data = yf.download(tickers, period=period, group_by='ticker', auto_adjust=True)
         
         df_close = pd.DataFrame()
