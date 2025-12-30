@@ -40,3 +40,8 @@ def train_predict_ensemble(df, ticker):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
         ensemble.fit(X_train, y_train)
+        # Final prediction for the next day
+    latest_data = X.tail(1)
+    prediction_prob = ensemble.predict_proba(latest_data)[0][1]
+    
+    return prediction_prob, ensemble
