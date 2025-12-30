@@ -45,3 +45,28 @@ def train_predict_ensemble(df, ticker):
     prediction_prob = ensemble.predict_proba(latest_data)[0][1]
     
     return prediction_prob, ensemble
+
+def get_ensemble_signals(df, ticker):
+    # This function generates a full history of signals for the backtest
+    data = compute_technical_indicators(df, ticker)
+    features = ['Dist_MA20', 'RSI', 'BB_Width', 'Hist_Vol']
+    X = data[features]
+    
+    # Simple walk-forward: we use 70% for training and predict on the remaining 30%
+    split = int(0.7 * len(data))
+    X_train, X_test = X.iloc[:split], X.iloc[split:]
+    y_train = data['Target'].iloc[:split]
+    
+    ensemble = VotingClassifier(
+        estimators=[
+            ('rf', RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)),
+            ('xgb', XGBClassifier(n_estimators=100, learning_rate=0.05, max_depth=3, eval_metric='logloss')),
+            ('lr', LogisticRegression())
+        ],
+        voting='soft'
+    )
+    
+    ensemble.fit(X_train, y_train)
+    test_signals = ensemble.predict_proba(X_test)[:, 1]
+    
+    return data['Close'].iloc[split:], test_signals
