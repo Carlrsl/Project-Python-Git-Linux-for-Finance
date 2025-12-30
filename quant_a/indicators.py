@@ -22,3 +22,12 @@ def compute_technical_indicators(df, ticker):
     data['Upper_Band'] = data['MA20'] + (data['Std_Dev'] * 2)
     data['Lower_Band'] = data['MA20'] - (data['Std_Dev'] * 2)
     data['BB_Width'] = (data['Upper_Band'] - data['Lower_Band']) / data['MA20']
+
+    # Performance Indicator: Historical Volatility (Annualized)
+    data['Log_Ret'] = np.log(data['Close'] / data['Close'].shift(1))
+    data['Hist_Vol'] = data['Log_Ret'].rolling(window=21).std() * np.sqrt(252)
+    
+    # Target Variable: 1 if next day return is positive, 0 otherwise
+    data['Target'] = (data['Close'].shift(-1) > data['Close']).astype(int)
+
+    
