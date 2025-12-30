@@ -16,3 +16,13 @@ def train_predict_ensemble(df, ticker):
     y = data['Target']
     
     return X, y
+
+# Base models for our Ensemble
+    # 1. Random Forest for robustness to noise
+    rf = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+    
+    # 2. XGBoost for capturing non-linear patterns
+    xgb = XGBClassifier(n_estimators=100, learning_rate=0.05, max_depth=3, eval_metric='logloss')
+    
+    # 3. Logistic Regression as a stable linear baseline
+    lr = LogisticRegression()
