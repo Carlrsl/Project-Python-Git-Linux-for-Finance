@@ -32,3 +32,11 @@ def train_predict_ensemble(df, ticker):
         estimators=[('rf', rf), ('xgb', xgb), ('lr', lr)],
         voting='soft'
     )
+    # TimeSeriesSplit: 5 folds to ensure strict chronological validation
+    tscv = TimeSeriesSplit(n_splits=5)
+    
+    # Backtesting loop using the TimeSeriesSplit logic
+    for train_index, test_index in tscv.split(X):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+        ensemble.fit(X_train, y_train)
