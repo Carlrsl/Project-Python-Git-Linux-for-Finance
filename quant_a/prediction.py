@@ -26,3 +26,9 @@ def train_predict_ensemble(df, ticker):
     
     # 3. Logistic Regression as a stable linear baseline
     lr = LogisticRegression()
+
+    # Soft Voting: takes the average of predicted probabilities
+    ensemble = VotingClassifier(
+        estimators=[('rf', rf), ('xgb', xgb), ('lr', lr)],
+        voting='soft'
+    )
