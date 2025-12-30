@@ -17,3 +17,8 @@ def compute_technical_indicators(df, ticker):
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
     rs = gain / loss
     data['RSI'] = 100 - (100 / (1 + rs))
+    # Volatility Indicator: Bollinger Bands
+    data['Std_Dev'] = data['Close'].rolling(window=20).std()
+    data['Upper_Band'] = data['MA20'] + (data['Std_Dev'] * 2)
+    data['Lower_Band'] = data['MA20'] - (data['Std_Dev'] * 2)
+    data['BB_Width'] = (data['Upper_Band'] - data['Lower_Band']) / data['MA20']
