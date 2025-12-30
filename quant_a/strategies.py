@@ -49,3 +49,9 @@ def calculate_metrics(cumulative_value, risk_free_rate=0.02):
         "Sharpe Ratio": f"{sharpe_ratio:.2f}",
         "Max Drawdown": f"{max_drawdown * 100:.2f} %",
     }
+
+def run_ai_strategy():
+    pass
+
+def calculate_performance_metrics():
+    pass
