@@ -1,5 +1,6 @@
 import plotly.graph_objects as go
 import streamlit as st
+
 def plot_ai_strategy(strategy_df, ticker):
     # Main chart: Price vs Strategy Cumulative Value
     fig = go.Figure()
@@ -30,7 +31,7 @@ def plot_ai_strategy(strategy_df, ticker):
     
     st.plotly_chart(fig, use_container_width=True)
 
-    def display_ai_metrics(metrics):
+def display_ai_metrics(metrics):
     # Displaying metrics in professional columns
     c1, c2, c3, c4 = st.columns(4)
     
