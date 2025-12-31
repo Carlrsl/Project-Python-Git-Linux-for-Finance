@@ -12,3 +12,5 @@ st.set_page_config(page_title="Multi-Asset Management AI Platform", layout="wide
 def main():
     st.title("Asset Management Dashboard")
     st.markdown("---")
+    # The two main modules of the platform
+    tab_a, tab_b = st.tabs(["📊 Quant A (Single Asset AI)", "📈 Quant B (Portfolio Management)"])
