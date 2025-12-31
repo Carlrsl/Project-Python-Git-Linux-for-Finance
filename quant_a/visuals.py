@@ -29,3 +29,12 @@ def plot_ai_strategy(strategy_df, ticker):
     )
     
     st.plotly_chart(fig, use_container_width=True)
+
+    def display_ai_metrics(metrics):
+    # Displaying metrics in professional columns
+    c1, c2, c3, c4 = st.columns(4)
+    
+    c1.metric("Total Return", f"{metrics['Total Return']:.2%}")
+    c2.metric("Annual Volatility", f"{metrics['Annual Volatility']:.2%}")
+    c3.metric("Sharpe Ratio", f"{metrics['Sharpe Ratio']:.2f}")
+    c4.metric("Max Drawdown", f"{metrics['Max Drawdown']:.2%}")
