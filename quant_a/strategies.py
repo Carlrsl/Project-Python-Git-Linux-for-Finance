@@ -1,57 +1,49 @@
-# quant_a/strategies.py
-
-import numpy as np
 import pandas as pd
+import numpy as np
+from quant_a.prediction import get_ensemble_signals
 
-# --- Fonctions de Stratégie ---
+def run_ai_strategy(df, ticker, threshold=0.55):
+    # Retrieve out-of-sample prices and AI probabilities
+    prices, probabilities = get_ensemble_signals(df, ticker)
+    
+    strategy_df = pd.DataFrame(index=prices.index)
+    strategy_df['Price'] = prices
+    strategy_df['Returns'] = strategy_df['Price'].pct_change()
+    
+    # AI Signal: 1 if probability > threshold, 0 (cash) otherwise
+    # We use a 0.55 threshold to ensure a higher conviction before buying
+    strategy_df['Signal'] = (probabilities > threshold).astype(int)
+    
+    # Calculate strategy returns (signal is applied to the next day's return)
+    strategy_df['Strategy_Returns'] = strategy_df['Returns'] * strategy_df['Signal'].shift(1)
+    
+    # Cumulative performance (Base 1)
+    strategy_df['Cumulative_AI'] = (1 + strategy_df['Strategy_Returns'].fillna(0)).cumprod()
+    strategy_df['Cumulative_BH'] = (1 + strategy_df['Returns'].fillna(0)).cumprod()
+    
+    return strategy_df
 
-def run_buy_and_hold(prices):
-    """ Calcule la valeur cumulative de la stratégie Buy and Hold (base 100). """
-    returns = prices['Price'].pct_change()
-    returns.fillna(0, inplace=True)
-    cumulative_value = (1 + returns).cumprod() * 100
-    return cumulative_value
-
-def run_momentum_strategy(prices, short_window=50, long_window=200):
-    """ Calcule la valeur cumulative de la stratégie de croisement de moyennes mobiles. """
-    data = prices.copy()
-    data['Short_MA'] = data['Price'].rolling(window=short_window).mean()
-    data['Long_MA'] = data['Price'].rolling(window=long_window).mean()
+def calculate_performance_metrics(cumulative_series):
+    # Basic daily returns for math
+    returns = cumulative_series.pct_change().dropna()
     
-    # Position (1: Achat, -1: Vente/Short)
-    data['Signal'] = np.where(data['Short_MA'] > data['Long_MA'], 1, -1)
+    # Total Return over the period
+    total_return = cumulative_series.iloc[-1] - 1
     
-    data['Strategy_Returns'] = data['Price'].pct_change() * data['Signal'].shift(1)
-    data['Strategy_Returns'].fillna(0, inplace=True)
+    # Annualized Volatility
+    annual_vol = returns.std() * np.sqrt(252)
     
-    cumulative_value = (1 + data['Strategy_Returns']).cumprod() * 100
-    return cumulative_value
-
-# --- Fonction de Métriques ---
-
-def calculate_metrics(cumulative_value, risk_free_rate=0.02):
-    """ Calcule et formate les métriques clés de performance. """
-    strategy_returns = cumulative_value.pct_change().dropna()
+    # Sharpe Ratio (assuming 2% risk-free rate)
+    sharpe = (returns.mean() * 252 - 0.02) / annual_vol if annual_vol != 0 else 0
     
-    annual_returns = strategy_returns.mean() * 252
-    annual_volatility = strategy_returns.std() * np.sqrt(252)
-    
-    sharpe_ratio = (annual_returns - risk_free_rate) / annual_volatility if annual_volatility != 0 else 0.0
-    
-    peak = cumulative_value.cummax()
-    max_drawdown = ((cumulative_value - peak) / peak).min()
-    
-    total_return = (cumulative_value.iloc[-1] / 100) - 1
+    # Max Drawdown calculation
+    peak = cumulative_series.cummax()
+    drawdown = (cumulative_series - peak) / peak
+    max_dd = drawdown.min()
     
     return {
-        "Rend. Total": f"{total_return * 100:.2f} %",
-        "Rend. Annuel": f"{annual_returns * 100:.2f} %",
-        "Sharpe Ratio": f"{sharpe_ratio:.2f}",
-        "Max Drawdown": f"{max_drawdown * 100:.2f} %",
+        "Total Return": total_return,
+        "Annual Volatility": annual_vol,
+        "Sharpe Ratio": sharpe,
+        "Max Drawdown": max_dd
     }
-
-def run_ai_strategy():
-    pass
-
-def calculate_performance_metrics():
-    pass
