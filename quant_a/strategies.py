@@ -1,49 +1,81 @@
 import pandas as pd
 import numpy as np
-from quant_a.prediction import get_ensemble_signals
 
-def run_ai_strategy(df, ticker, threshold=0.55):
-    # Retrieve out-of-sample prices and AI probabilities
-    prices, probabilities = get_ensemble_signals(df, ticker)
+def run_ma_crossover_strategy(df: pd.DataFrame, short_window: int, long_window: int) -> pd.DataFrame:
+    """
+    Implements a Moving Average Crossover strategy (Momentum).
+    Short MA > Long MA = Buy Signal.
+    """
+    data = df.copy()
+    # Renaming to 'Close' if necessary to ensure compatibility with data_loader
+    if 'Close' not in data.columns and len(data.columns) == 1:
+        data.columns = ['Close']
+        
+    data['Short_MA'] = data['Close'].rolling(window=short_window).mean()
+    data['Long_MA'] = data['Close'].rolling(window=long_window).mean()
     
-    strategy_df = pd.DataFrame(index=prices.index)
-    strategy_df['Price'] = prices
-    strategy_df['Returns'] = strategy_df['Price'].pct_change()
+    # Signal generation: 1 (Long), -1 (Short)
+    data['Signal'] = 0.0
+    data['Signal'] = np.where(data['Short_MA'] > data['Long_MA'], 1.0, -1.0)
     
-    # AI Signal: 1 if probability > threshold, 0 (cash) otherwise
-    # We use a 0.55 threshold to ensure a higher conviction before buying
-    strategy_df['Signal'] = (probabilities > threshold).astype(int)
+    # Shift signal by 1 day to prevent look-ahead bias
+    data['Strategy_Returns'] = data['Signal'].shift(1) * data['Close'].pct_change()
+    data['Cumulative_PNL'] = (1 + data['Strategy_Returns'].fillna(0)).cumprod()
+    data['Benchmark_PNL'] = (1 + data['Close'].pct_change().fillna(0)).cumprod()
     
-    # Calculate strategy returns (signal is applied to the next day's return)
-    strategy_df['Strategy_Returns'] = strategy_df['Returns'] * strategy_df['Signal'].shift(1)
-    
-    # Cumulative performance (Base 1)
-    strategy_df['Cumulative_AI'] = (1 + strategy_df['Strategy_Returns'].fillna(0)).cumprod()
-    strategy_df['Cumulative_BH'] = (1 + strategy_df['Returns'].fillna(0)).cumprod()
-    
-    return strategy_df
+    return data
 
-def calculate_performance_metrics(cumulative_series):
-    # Basic daily returns for math
+def run_bollinger_strategy(df: pd.DataFrame, window: int, num_std: float) -> pd.DataFrame:
+    """
+    Implements a Bollinger Bands Mean-Reversion strategy.
+    Price < Lower Band = Buy Signal.
+    """
+    data = df.copy()
+    if 'Close' not in data.columns and len(data.columns) == 1:
+        data.columns = ['Close']
+
+    data['MA'] = data['Close'].rolling(window=window).mean()
+    data['STD'] = data['Close'].rolling(window=window).std()
+    data['Upper'] = data['MA'] + (num_std * data['STD'])
+    data['Lower'] = data['MA'] - (num_std * data['STD'])
+    
+    # Signal generation: Buy at oversold, Sell at overbought
+    data['Signal'] = 0.0
+    data['Signal'] = np.where(data['Close'] < data['Lower'], 1.0, 
+                             np.where(data['Close'] > data['Upper'], -1.0, 0.0))
+    
+    # Preventing look-ahead bias
+    data['Strategy_Returns'] = data['Signal'].shift(1) * data['Close'].pct_change()
+    data['Cumulative_PNL'] = (1 + data['Strategy_Returns'].fillna(0)).cumprod()
+    data['Benchmark_PNL'] = (1 + data['Close'].pct_change().fillna(0)).cumprod()
+    
+    return data
+
+def get_performance_metrics(cumulative_series: pd.Series):
+    """
+    Calculates institutional risk/return KPIs.
+    """
     returns = cumulative_series.pct_change().dropna()
     
-    # Total Return over the period
+    # Performance metrics calculation
     total_return = cumulative_series.iloc[-1] - 1
+    ann_vol = returns.std() * np.sqrt(252)
     
-    # Annualized Volatility
-    annual_vol = returns.std() * np.sqrt(252)
+    # Sharpe Ratio (Risk-free rate assumed at 2.0%)
+    sharpe = (returns.mean() * 252 - 0.02) / ann_vol if ann_vol != 0 else 0
     
-    # Sharpe Ratio (assuming 2% risk-free rate)
-    sharpe = (returns.mean() * 252 - 0.02) / annual_vol if annual_vol != 0 else 0
-    
-    # Max Drawdown calculation
+    # Maximum Drawdown calculation
     peak = cumulative_series.cummax()
     drawdown = (cumulative_series - peak) / peak
     max_dd = drawdown.min()
     
+    # Hit Ratio: percentage of winning days
+    hit_ratio = len(returns[returns > 0]) / len(returns) if len(returns) > 0 else 0
+    
     return {
         "Total Return": total_return,
-        "Annual Volatility": annual_vol,
+        "Annual Vol": ann_vol,
         "Sharpe Ratio": sharpe,
-        "Max Drawdown": max_dd
+        "Max Drawdown": max_dd,
+        "Hit Ratio": hit_ratio
     }

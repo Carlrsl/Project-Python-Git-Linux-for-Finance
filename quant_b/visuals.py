@@ -1,27 +1,44 @@
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 def plot_correlation_heatmap(corr_matrix):
+    """
+    Renders an interactive heatmap to analyze asset dependencies.
+    Essential for explaining diversification benefits.
+    """
     fig = px.imshow(
         corr_matrix,
-        text_auto=".2f",                  # Display values with 2 decimal places
+        text_auto=".2f",
         aspect="auto",
-        color_continuous_scale="RdBu_r",  # Red = Positive Correlation, Blue = Negative
+        color_continuous_scale="RdBu_r", # Professional financial standard
         zmin=-1, 
         zmax=1,
-        origin='lower'
+        labels=dict(color="Correlation")
     )
     
-    fig.update_layout(title="Asset Correlation Matrix")
+    fig.update_layout(
+        title="Cross-Asset Correlation Matrix",
+        template="plotly_dark",
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 def plot_normalized_prices(df_normalized):
-    fig = px.line(df_normalized, title="Performance Comparison (Base 100)")
+    """
+    Compares the historical performance of all universe assets.
+    """
+    fig = px.line(
+        df_normalized, 
+        title="Asset Performance Benchmark (Base 100)",
+        template="plotly_dark"
+    )
     
     fig.update_layout(
-        xaxis_title="Date", 
-        yaxis_title="Normalized Price (Start=100)",
-        legend_title="Assets"
+        xaxis_title="Timeline", 
+        yaxis_title="Indexed Value",
+        legend_title="Tickers",
+        hovermode="x unified"
     )
     
     st.plotly_chart(fig, use_container_width=True)
