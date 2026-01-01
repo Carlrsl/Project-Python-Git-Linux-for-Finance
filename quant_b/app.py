@@ -24,8 +24,8 @@ def render_quant_b(df):
         ### Portfolio Optimization Logic
         This module implements **Markowitz Mean-Variance Optimization**. 
         - **Objective**: Maximize the Sharpe Ratio (return per unit of risk).
-        - **Efficient Frontier**: We use Monte Carlo simulations (5,000 iterations) to find the set of optimal portfolios that offer the highest expected return for a defined level of risk.
-        - **Risk Decomposition**: We analyze correlations to ensure diversification benefits are maximized, reducing idiosyncratic risk.
+        - **Efficient Frontier**: We use Monte Carlo simulations (5,000 iterations) to find the set of optimal portfolios.
+        - **Risk Decomposition**: We analyze correlations to ensure diversification benefits are maximized.
         """)
 
     # --- SECTION 1: ALLOCATION STRATEGY ---
@@ -40,10 +40,8 @@ def render_quant_b(df):
         with st.spinner("Calculating Optimal Frontier..."):
             opt_results = optimize_portfolio(df)
             weights_dict = opt_results['weights']
-            weights = [weights_dict[asset] for asset in assets]
             st.success("Weights optimized for Maximum Sharpe Ratio.")
     else:
-        weights = [1.0 / num_assets] * num_assets
         weights_dict = {asset: 1.0/num_assets for asset in assets}
 
     # Display Weights Sliders (Interactive Requirement)
@@ -56,7 +54,7 @@ def render_quant_b(df):
                 display_weights.append(w)
         
         if abs(sum(display_weights) - 1.0) > 0.01:
-            st.warning(f"Total Allocation: {sum(display_weights):.2%}. Normalizing to 100%...")
+            st.warning(f"Total Allocation: {sum(display_weights):.2%}. Normalizing weights to 100%...")
 
     # --- SECTION 2: PERFORMANCE COMPARISON ---
     results = simulate_portfolio(df, display_weights)
@@ -71,18 +69,33 @@ def render_quant_b(df):
 
     # MAIN CHART: Comparison Requirement (Portfolio vs all Assets)
     fig_comp = go.Figure()
-    # Individual Assets (Translucent for clarity)
+    
+    # Corrected loop: opacity moved outside of the line dictionary
     for asset in assets:
         norm_series = df[asset] / df[asset].iloc[0]
-        fig_comp.add_trace(go.Scatter(x=df.index, y=norm_series, name=asset, 
-                                     line=dict(width=1, opacity=0.3), showlegend=True))
+        fig_comp.add_trace(go.Scatter(
+            x=df.index, 
+            y=norm_series, 
+            name=asset, 
+            line=dict(width=1),
+            opacity=0.3, # Correct property path
+            showlegend=True
+        ))
     
-    # The Portfolio (Bold White)
-    fig_comp.add_trace(go.Scatter(x=df.index, y=results['cumulative_returns'], 
-                                 name="STRATEGIC PORTFOLIO", line=dict(width=4, color='white')))
+    # Highlighting the Strategic Portfolio
+    fig_comp.add_trace(go.Scatter(
+        x=df.index, 
+        y=results['cumulative_returns'], 
+        name="STRATEGIC PORTFOLIO", 
+        line=dict(width=4, color='white')
+    ))
     
-    fig_comp.update_layout(title="Strategic Equity Curve vs. Universe Components", 
-                           template="plotly_dark", height=500, hovermode="x unified")
+    fig_comp.update_layout(
+        title="Strategic Equity Curve vs. Universe Components", 
+        template="plotly_dark", 
+        height=500, 
+        hovermode="x unified"
+    )
     st.plotly_chart(fig_comp, use_container_width=True)
 
     # --- SECTION 3: RISK & OPTIMIZATION VISUALS ---
@@ -94,7 +107,6 @@ def render_quant_b(df):
         _, corr_matrix = calculate_global_metrics(df)
         plot_correlation_heatmap(corr_matrix)
         
-        # VaR/CVaR Display
         risk_data = calculate_risk_metrics(results['daily_returns'])
         with st.container(border=True):
             st.write("**Tail Risk Analysis (95% Confidence)**")
@@ -106,12 +118,16 @@ def render_quant_b(df):
         st.subheader("Efficient Frontier (Monte Carlo)")
         if mode == "Optimal Sharpe (Markowitz)":
             mc_data = opt_results['monte_carlo_results']
-            fig_eff = px.scatter(x=mc_data[0], y=mc_data[1], color=mc_data[2], 
-                               labels={'x':'Volatility', 'y':'Return', 'color':'Sharpe'},
-                               color_continuous_scale='Viridis')
-            fig_eff.add_trace(go.Scatter(x=[opt_results['volatility']], y=[opt_results['return']], 
-                                       mode='markers', marker=dict(color='red', size=15, symbol='star'),
-                                       name='Optimal Point'))
+            fig_eff = px.scatter(
+                x=mc_data[0], y=mc_data[1], color=mc_data[2], 
+                labels={'x':'Volatility', 'y':'Return', 'color':'Sharpe'},
+                color_continuous_scale='Viridis'
+            )
+            fig_eff.add_trace(go.Scatter(
+                x=[opt_results['volatility']], y=[opt_results['return']], 
+                mode='markers', marker=dict(color='red', size=15, symbol='star'),
+                name='Optimal Point'
+            ))
             fig_eff.update_layout(template="plotly_dark")
             st.plotly_chart(fig_eff, use_container_width=True)
         else:
